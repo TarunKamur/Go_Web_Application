@@ -1,8 +1,10 @@
+
 package main
 
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
 func homePage(w http.ResponseWriter, r *http.Request) {
@@ -31,15 +33,22 @@ func shopPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	http.HandleFunc("/home", homePage)
 	http.HandleFunc("/courses", coursePage)
 	http.HandleFunc("/about", aboutPage)
 	http.HandleFunc("/contact", contactPage)
 	http.HandleFunc("/shop", shopPage)
 
-	err := http.ListenAndServe("0.0.0.0:8080", nil)
-	if err != nil {
+	server := &http.Server{
+		Addr:         "0.0.0.0:8080",
+		Handler:      nil,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }
+
