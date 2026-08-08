@@ -1,23 +1,35 @@
-FROM golang:1.22.5 as base
+# -----------------------------
+# Stage 1: Build
+# -----------------------------
+FROM golang:1.24.7-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod .
-
+# Cache Go dependencies
+COPY go.mod ./
 RUN go mod download
 
+# Copy application source
 COPY . .
 
-RUN go build -o main .
+# Build a static binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o app .
 
-# final stage with distroless image
 
-FROM gcr.io/distroless/base
+# -----------------------------
+# Stage 2: Runtime
+# -----------------------------
+FROM gcr.io/distroless/static-debian12:nonroot
 
-COPY --from=base /app/main .
+WORKDIR /
 
-COPY --from=base /app/static ./static
+# Copy only the application binary and static files
+COPY --from=builder /app/app /app
+COPY --from=builder /app/static ./static
 
 EXPOSE 8080
 
-CMD ["./main"]
+USER nonroot:nonroot
+
+ENTRYPOINT ["/app"]
